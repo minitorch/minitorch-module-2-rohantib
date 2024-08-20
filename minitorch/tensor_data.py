@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from typing import Iterable, Optional, Sequence, Tuple, Union
+from typing import Iterable, Optional, Sequence, Tuple, Union, Generator
 
 import numba
 import numpy as np
@@ -42,9 +42,7 @@ def index_to_position(index: Index, strides: Strides) -> int:
     Returns:
         Position in storage
     """
-
-    # TODO: Implement for Task 2.1.
-    raise NotImplementedError("Need to implement for Task 2.1")
+    return (index * strides).sum()
 
 
 def to_index(ordinal: int, shape: Shape, out_index: OutIndex) -> None:
@@ -60,8 +58,11 @@ def to_index(ordinal: int, shape: Shape, out_index: OutIndex) -> None:
         out_index : return index corresponding to position.
 
     """
-    # TODO: Implement for Task 2.1.
-    raise NotImplementedError("Need to implement for Task 2.1")
+    remaining_ind = ordinal
+    for i in range(len(shape) - 1, -1, -1):
+        dim = shape[i]
+        out_index[i] = remaining_ind % dim
+        remaining_ind /= dim
 
 
 def broadcast_index(
@@ -83,8 +84,12 @@ def broadcast_index(
     Returns:
         None
     """
-    # TODO: Implement for Task 2.2.
-    raise NotImplementedError("Need to implement for Task 2.2")
+    shape_size_diff = len(big_shape) - len(shape)
+    for i in range(shape.size - 1, -1, -1):
+        if shape[i] == 1:
+            out_index[i] = 0
+        else:
+            out_index[i] = big_index[i + shape_size_diff]
 
 
 def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
@@ -101,8 +106,19 @@ def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
     Raises:
         IndexingError : if cannot broadcast
     """
-    # TODO: Implement for Task 2.2.
-    raise NotImplementedError("Need to implement for Task 2.2")
+    # Convert shapes to same number of dimensions by prepending dimensions of size 1
+    if len(shape1) < len(shape2):
+        shape1 = (1,) * (len(shape2) - len(shape1)) + tuple(shape1)
+    else:
+        shape2 = (1,) * (len(shape1) - len(shape2)) + tuple(shape2)
+    new_shape: UserShape = []
+    for i in range(len(shape1)):
+        d1, d2 = shape1[i], shape2[i]
+        if d1 == d2 or d1 == 1 or d2 == 1:
+            new_shape.append(max(d1, d2))
+        else:
+            raise IndexingError(f"The size of tensor a ({d1}) must match the size of tensor b ({d2}) at non-singleton dimension {i}")
+    return tuple(new_shape)    
 
 
 def strides_from_shape(shape: UserShape) -> UserStrides:
@@ -173,6 +189,7 @@ class TensorData:
     def index(self, index: Union[int, UserIndex]) -> int:
         if isinstance(index, int):
             aindex: Index = array([index])
+        # TODO: Check if this conversion is necessary
         if isinstance(index, tuple):
             aindex = array(index)
 
@@ -222,8 +239,9 @@ class TensorData:
             range(len(self.shape))
         ), f"Must give a position to each dimension. Shape: {self.shape} Order: {order}"
 
-        # TODO: Implement for Task 2.1.
-        raise NotImplementedError("Need to implement for Task 2.1")
+        new_shape: Generator[int] = (self.shape[i] for i in order)
+        new_strides: Generator[int] = (self.strides[i] for i in order)
+        return TensorData(self._storage, tuple(new_shape), tuple(new_strides))
 
     def to_string(self) -> str:
         s = ""

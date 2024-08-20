@@ -6,16 +6,20 @@ from hypothesis.strategies import DataObject, data, lists, permutations
 
 from minitorch import MathTestVariable, Tensor, grad_check, tensor
 
+import numpy as np
+
 from .strategies import assert_close, small_floats
 from .tensor_strategies import shaped_tensors, tensors
 
 one_arg, two_arg, red_arg = MathTestVariable._comp_testing()
 
 
+@pytest.mark.task2_1
 @given(lists(small_floats, min_size=1))
 def test_create(t1: List[float]) -> None:
     "Test the ability to create an index a 1D Tensor"
     t2 = tensor(t1)
+    print(t1, t2)
     for i in range(len(t1)):
         assert t1[i] == t2[i]
 
@@ -70,6 +74,7 @@ def test_permute(data: DataObject, t1: Tensor) -> None:
     grad_check(permute, t1)
 
 
+# TODO: Test this?
 def test_grad_size() -> None:
     "Test the size of the gradient (from @WannaFy)"
     a = tensor([1], requires_grad=True)
@@ -125,7 +130,7 @@ def test_two_grad_broadcast(
     grad_check(tensor_fn, t1.sum(0), t2)
     grad_check(tensor_fn, t1, t2.sum(0))
 
-
+@pytest.mark.task2_1
 def test_fromlist() -> None:
     "Test longer from list conversion"
     t = tensor([[2, 3, 4], [4, 5, 7]])
@@ -133,7 +138,7 @@ def test_fromlist() -> None:
     t = tensor([[[2, 3, 4], [4, 5, 7]]])
     assert t.shape == (1, 2, 3)
 
-
+@pytest.mark.task2_3
 def test_view() -> None:
     "Test view"
     t = tensor([[2, 3, 4], [4, 5, 7]])
@@ -147,7 +152,7 @@ def test_view() -> None:
     t2 = t2.view(2, 3)
     assert t.is_close(t2).all().item() == 1.0
 
-
+@pytest.mark.task2_4
 @given(tensors())
 def test_back_view(t1: Tensor) -> None:
     "Test the graident of view"
@@ -158,7 +163,7 @@ def test_back_view(t1: Tensor) -> None:
 
     grad_check(view, t1)
 
-
+@pytest.mark.task2_1
 @pytest.mark.xfail
 def test_permute_view() -> None:
     t = tensor([[2, 3, 4], [4, 5, 7]])
@@ -167,6 +172,7 @@ def test_permute_view() -> None:
     t2.view(6)
 
 
+@pytest.mark.task2_1
 @pytest.mark.xfail
 def test_index() -> None:
     t = tensor([[2, 3, 4], [4, 5, 7]])
@@ -174,6 +180,7 @@ def test_index() -> None:
     t[50, 2]
 
 
+@pytest.mark.task2_1
 def test_fromnumpy() -> None:
     t = tensor([[2, 3, 4], [4, 5, 7]])
     print(t)
@@ -185,6 +192,90 @@ def test_fromnumpy() -> None:
 
 
 # Student Submitted Tests
+
+
+@pytest.mark.task2_3
+def test_broadcast_map() -> None:
+    for seed in range(100):
+        np.random.seed(seed)
+        inp_np = np.random.random((1, 4))
+        inp_exp = np.exp(inp_np)
+        out_np = inp_exp + np.zeros((2, 3, 5, 4))
+        t = tensor(inp_np.tolist())
+        out_t = t.zeros((2, 3, 5, 4))
+        t.f.exp_map(t, out_t)
+        assert out_t.shape == out_np.shape
+        assert np.allclose(out_t.to_numpy(), out_np)
+
+
+@pytest.mark.task2_3
+def test_diff_stride_map() -> None:
+    for seed in range(100):
+        np.random.seed(seed)
+        inp_np = np.random.random((2, 3, 1, 4))
+        out_np = np.exp(inp_np)
+        t = tensor(inp_np.tolist())
+        out_t = t.zeros((3, 4, 1, 2))
+        out_t = out_t.permute(3, 0, 2, 1)
+        t.f.exp_map(t, out_t)
+        assert out_t.shape == out_np.shape
+        assert np.allclose(out_t.to_numpy(), out_np)
+
+@pytest.mark.task2_3
+def test_broadcast_and_diff_stride_map() -> None:
+    for seed in range(100):
+        np.random.seed(seed)
+        inp_np = np.random.random((5, 1, 4, 2))
+        inp_exp = np.exp(inp_np)
+        out_np = inp_exp + np.zeros((5, 6, 4, 2))
+        t = tensor(inp_np.tolist())
+        out_t = t.zeros((6, 2, 4, 5))
+        out_t = out_t.permute(3, 0, 2, 1)
+        t.f.exp_map(t, out_t)
+        assert out_t.shape == out_np.shape
+        assert np.allclose(out_t.to_numpy(), out_np)
+
+@pytest.mark.task2_3
+def test_broadcast_zip() -> None:
+    for seed in range(100):
+        np.random.seed(seed)
+        a_np = np.random.random((3, 2, 3, 1, 2))
+        b_np = np.random.random((1, 4, 2))
+        out_np = a_np + b_np
+        a_t = tensor(a_np.tolist())
+        b_t = tensor(b_np.tolist())
+        out_t = a_t.f.add_zip(a_t, b_t)
+        assert out_t.shape == out_np.shape
+        assert np.allclose(out_t.to_numpy(), out_np)
+
+@pytest.mark.task2_3
+def test_diff_stride_zip() -> None:
+    for seed in range(100):
+        np.random.seed(seed)
+        a_np = np.random.random((1, 3, 4, 2, 5))
+        b_np = np.random.random((1, 3, 4, 2, 5))
+        out_np = a_np * b_np
+        a_t = tensor(a_np.tolist())
+        b_t = tensor(b_np.T.tolist())
+        b_t = b_t.permute(4, 3, 2, 1, 0)
+        out_t = a_t.f.mul_zip(a_t, b_t)
+        assert out_t.shape == out_np.shape
+        assert np.allclose(out_t.to_numpy(), out_np)
+
+@pytest.mark.task2_3
+def test_broadcast_and_diff_stride_zip() -> None:
+    for seed in range(100):
+        np.random.seed(seed)
+        a_np = np.random.random((3, 3, 4, 2, 1))
+        b_np = np.random.random((4, 2, 2))
+        out_np = a_np * b_np
+        a_t = tensor(a_np.tolist())
+        b_t = tensor(b_np.T.tolist())
+        b_t = b_t.permute(2, 1, 0)
+        out_t = a_t.f.mul_zip(a_t, b_t)
+        assert out_t.shape == out_np.shape
+        assert np.allclose(out_t.to_numpy(), out_np)
+
 
 
 @pytest.mark.task2_3

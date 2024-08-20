@@ -93,10 +93,11 @@ class Tensor:
             self.name = name
         else:
             self.name = str(self.unique_id)
-
+        # TODO: Is this distinction between f and backend necessary? Is it possible this results in failures since f isn't updated?
         self.f = backend
 
     def requires_grad_(self, x: bool) -> None:
+        # TODO: Should this be checking x before creating the history variable? Seems like nothing is considered a constant
         self.history = History()
 
     def requires_grad(self) -> bool:
