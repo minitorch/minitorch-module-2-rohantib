@@ -104,8 +104,8 @@ class Mul(Function):
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, Tensor]:
-        # TODO: Implement for Task 2.4.
-        raise NotImplementedError("Need to implement for Task 2.4")
+        a, b = ctx.saved_values
+        return grad_output.f.mul_zip(b, grad_output), grad_output.f.mul_zip(a, grad_output)
 
 
 class Sigmoid(Function):
@@ -116,8 +116,8 @@ class Sigmoid(Function):
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tensor:
-        # TODO: Implement for Task 2.4.
-        raise NotImplementedError("Need to implement for Task 2.4")
+        (t1,) = ctx.saved_values
+        return grad_output.f.sigmoid_back_zip(t1, grad_output)
 
 
 class ReLU(Function):
@@ -128,8 +128,8 @@ class ReLU(Function):
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tensor:
-        # TODO: Implement for Task 2.4.
-        raise NotImplementedError("Need to implement for Task 2.4")
+        (t1,) = ctx.saved_values
+        return grad_output.f.relu_back_zip(t1, grad_output)
 
 
 class Log(Function):
@@ -140,8 +140,8 @@ class Log(Function):
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tensor:
-        # TODO: Implement for Task 2.4.
-        raise NotImplementedError("Need to implement for Task 2.4")
+        (t1,) = ctx.saved_values
+        return grad_output.f.log_back_zip(t1, grad_output)
 
 
 class Exp(Function):
@@ -152,13 +152,15 @@ class Exp(Function):
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tensor:
-        # TODO: Implement for Task 2.4.
-        raise NotImplementedError("Need to implement for Task 2.4")
+        # TODO: Should I implement this directly instead of having an exp_back? Probably not, avoid intermediate tensor
+        (t1,) = ctx.saved_values
+        return grad_output.f.exp_back_zip(t1, grad_output)
 
 
 class Sum(Function):
     @staticmethod
     def forward(ctx: Context, a: Tensor, dim: Tensor) -> Tensor:
+        # TODO: Remove saving values here?
         ctx.save_for_backward(a.shape, dim)
         return a.f.add_reduce(a, int(dim.item()))
 
@@ -169,11 +171,13 @@ class Sum(Function):
 
 
 class All(Function):
+    # NOTE: Does this not need a backward?
     @staticmethod
     def forward(ctx: Context, a: Tensor, dim: Tensor) -> Tensor:
         if dim is not None:
             return a.f.mul_reduce(a, int(dim.item()))
         else:
+            # NOTE: Seems like this is old code? This block shouldn't be called based on type hinting
             return a.f.mul_reduce(a.contiguous().view(int(operators.prod(a.shape))), 0)
 
 
@@ -185,8 +189,8 @@ class LT(Function):
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, Tensor]:
-        # TODO: Implement for Task 2.4.
-        raise NotImplementedError("Need to implement for Task 2.4")
+        a, b = ctx.saved_values
+        return grad_output.zeros(a.shape), grad_output.zeros(b.shape)
 
 
 class EQ(Function):
@@ -197,8 +201,8 @@ class EQ(Function):
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, Tensor]:
-        # TODO: Implement for Task 2.4.
-        raise NotImplementedError("Need to implement for Task 2.4")
+        a, b = ctx.saved_values
+        return grad_output.zeros(a.shape), grad_output.zeros(b.shape)
 
 
 class IsClose(Function):
@@ -208,24 +212,48 @@ class IsClose(Function):
 
 
 class Permute(Function):
+
+    # Helper Function
+    @staticmethod
+    def _t_ndarr_to_tuple(t: Union[Tensor, Shape, Strides]) -> Tuple[int, ...]:
+        """
+            Converts a tensor or numpy array to an int tuple
+        """
+        return tuple([int(t[i]) for i in range(t.size)])
+    
     @staticmethod
     def forward(ctx: Context, a: Tensor, order: Tensor) -> Tensor:
         # TODO: Do I need to save here?
         # TODO: Try disabling to see what fails after finishing 2.3
-        def t_ndarr_to_tuple(t: Union[Tensor, Shape, Strides]) -> Tuple[int, ...]:
-            return tuple([int(t[i]) for i in range(t.size)])
-
-        new_tensor_data = a._tensor.permute(*t_ndarr_to_tuple(order))
+        ctx.save_for_backward(order)
+        new_tensor_data = a._tensor.permute(*Permute._t_ndarr_to_tuple(order))
         new_t_storage, new_t_shape, new_t_strides = new_tensor_data.tuple()
         return minitorch.Tensor.make(
-            new_t_storage, t_ndarr_to_tuple(new_t_shape), strides=t_ndarr_to_tuple(new_t_strides), backend=a.backend
+            new_t_storage, 
+            Permute._t_ndarr_to_tuple(new_t_shape),
+            strides=Permute._t_ndarr_to_tuple(new_t_strides),
+            backend=a.backend
         )
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, float]:
-        # TODO: Implement for Task 2.4.
-        raise NotImplementedError("Need to implement for Task 2.4")
-
+        # NOTE: Copying the view code passes tests too. But it shouldn't? Perhaps tests aren't comprehensive.
+        (order,) = ctx.saved_values
+        restore_order = grad_output.zeros((order.size,))
+        # Generate the inverse permutation
+        for i in range(order.size):
+            restore_order[int(order[i])] = i
+        new_tensor_data = grad_output._tensor.permute(*Permute._t_ndarr_to_tuple(restore_order))
+        new_t_storage, new_t_shape, new_t_strides = new_tensor_data.tuple()
+        return (
+            minitorch.Tensor.make(
+                new_t_storage,
+                Permute._t_ndarr_to_tuple(new_t_shape),
+                strides=Permute._t_ndarr_to_tuple(new_t_strides),
+                backend=grad_output.backend
+            ),
+            0.0
+        )
 
 class View(Function):
     @staticmethod
