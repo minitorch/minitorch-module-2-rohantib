@@ -223,8 +223,6 @@ class Permute(Function):
     
     @staticmethod
     def forward(ctx: Context, a: Tensor, order: Tensor) -> Tensor:
-        # TODO: Do I need to save here?
-        # TODO: Try disabling to see what fails after finishing 2.3
         ctx.save_for_backward(order)
         new_tensor_data = a._tensor.permute(*Permute._t_ndarr_to_tuple(order))
         new_t_storage, new_t_shape, new_t_strides = new_tensor_data.tuple()
@@ -237,7 +235,7 @@ class Permute(Function):
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, float]:
-        # NOTE: Copying the view code passes tests too. But it shouldn't? Perhaps tests aren't comprehensive.
+        # TODO: Copying the view code passes tests too. But it shouldn't? Perhaps tests aren't comprehensive.
         (order,) = ctx.saved_values
         restore_order = grad_output.zeros((order.size,))
         # Generate the inverse permutation
@@ -254,6 +252,7 @@ class Permute(Function):
             ),
             0.0
         )
+    
 
 class View(Function):
     @staticmethod
@@ -342,6 +341,7 @@ def rand(
     """
     vals = [random.random() for _ in range(int(operators.prod(shape)))]
     tensor = minitorch.Tensor.make(vals, shape, backend=backend)
+    # NOTE: This requires_grad call seems to be unnecessary for any current use case of this function
     tensor.requires_grad_(requires_grad)
     return tensor
 
@@ -365,7 +365,6 @@ def _tensor(
         new tensor
     """
     tensor = minitorch.Tensor.make(ls, shape, backend=backend)
-    # TODO: This seems like it fails to make constants since requires_grad is never used
     tensor.requires_grad_(requires_grad)
     return tensor
 

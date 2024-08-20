@@ -74,7 +74,7 @@ def test_permute(data: DataObject, t1: Tensor) -> None:
     grad_check(permute, t1)
 
 
-# TODO: Test this?
+@pytest.mark.task2_4
 def test_grad_size() -> None:
     "Test the size of the gradient (from @WannaFy)"
     a = tensor([1], requires_grad=True)

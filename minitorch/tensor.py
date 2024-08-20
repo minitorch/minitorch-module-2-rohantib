@@ -97,7 +97,7 @@ class Tensor:
         self.f = backend
 
     def requires_grad_(self, x: bool) -> None:
-        # TODO: Should this be checking x before creating the history variable? Seems like nothing is considered a constant
+        # NOTE: The code seems to not make use of the boolean at all. Probably is unnecessary
         self.history = History()
 
     def requires_grad(self) -> bool:

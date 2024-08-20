@@ -66,7 +66,6 @@ def topological_sort(variable: Variable) -> Iterable[Variable]:
     top_rev_order: List[Variable] = []
 
     def top_helper(variable: Variable) -> None:
-        # TODO: Try removing the constant check here after finished with module
         if variable.unique_id in visited or variable.is_constant():
             return
         visited.add(variable.unique_id)
