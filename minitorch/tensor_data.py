@@ -42,6 +42,7 @@ def index_to_position(index: Index, strides: Strides) -> int:
     Returns:
         Position in storage
     """
+    index, strides = np.asanyarray(index), np.asanyarray(strides)  # To make visualizations work since they don't follow typing
     return (index * strides).sum()
 
 
@@ -189,7 +190,6 @@ class TensorData:
     def index(self, index: Union[int, UserIndex]) -> int:
         if isinstance(index, int):
             aindex: Index = array([index])
-        # TODO: Check if this conversion is necessary
         if isinstance(index, tuple):
             aindex = array(index)
 
@@ -203,7 +203,7 @@ class TensorData:
                 raise IndexingError(f"Negative indexing for {aindex} not supported.")
 
         # Call fast indexing.
-        return index_to_position(array(index), self._strides)
+        return index_to_position(aindex, self._strides)
 
     def indices(self) -> Iterable[UserIndex]:
         lshape: Shape = array(self.shape)

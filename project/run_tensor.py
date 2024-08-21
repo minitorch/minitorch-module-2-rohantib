@@ -46,7 +46,7 @@ def default_log_fn(epoch, total_loss, correct, losses):
 class TensorTrain:
     def __init__(self, hidden_layers):
         self.hidden_layers = hidden_layers
-        # NOTE: Model gets reset in train anyways?
+        # NOTE: Model gets reset in train anyways - seems unnecessary in current implementation
         self.model = Network(hidden_layers)
 
     def run_one(self, x):

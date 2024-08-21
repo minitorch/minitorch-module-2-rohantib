@@ -46,6 +46,7 @@ class Function:
         for v in vals:
             if v.requires_grad():
                 need_grad = True
+            # NOTE: Detach seems unnecessary here, just clears the tensor's history when used for processing in apply, but that is regardless not tracked.
             raw_vals.append(v.detach())
 
         # Create the context.
@@ -152,26 +153,24 @@ class Exp(Function):
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tensor:
-        # TODO: Should I implement this directly instead of having an exp_back? Probably not, avoid intermediate tensor
         (t1,) = ctx.saved_values
+        # NOTE: Although this could be implemented trivially with existing tensor operations without an explicit exp_back_zip,
+        # having a dedicated zip process for it avoid having to go through `apply` and more created tensors and unused gradient tracking.
         return grad_output.f.exp_back_zip(t1, grad_output)
 
 
 class Sum(Function):
     @staticmethod
     def forward(ctx: Context, a: Tensor, dim: Tensor) -> Tensor:
-        # TODO: Remove saving values here?
-        ctx.save_for_backward(a.shape, dim)
         return a.f.add_reduce(a, int(dim.item()))
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, float]:
-        a_shape, dim = ctx.saved_values
         return grad_output, 0.0
 
 
 class All(Function):
-    # NOTE: Does this not need a backward?
+    # NOTE: This appears to not need a `backward` implementation since it is only used in testing.
     @staticmethod
     def forward(ctx: Context, a: Tensor, dim: Tensor) -> Tensor:
         if dim is not None:
@@ -227,7 +226,7 @@ class Permute(Function):
         new_tensor_data = a._tensor.permute(*Permute._t_ndarr_to_tuple(order))
         new_t_storage, new_t_shape, new_t_strides = new_tensor_data.tuple()
         return minitorch.Tensor.make(
-            new_t_storage, 
+            new_t_storage,
             Permute._t_ndarr_to_tuple(new_t_shape),
             strides=Permute._t_ndarr_to_tuple(new_t_strides),
             backend=a.backend
@@ -235,7 +234,6 @@ class Permute(Function):
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, float]:
-        # TODO: Copying the view code passes tests too. But it shouldn't? Perhaps tests aren't comprehensive.
         (order,) = ctx.saved_values
         restore_order = grad_output.zeros((order.size,))
         # Generate the inverse permutation

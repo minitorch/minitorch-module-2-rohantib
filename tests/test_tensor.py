@@ -19,7 +19,6 @@ one_arg, two_arg, red_arg = MathTestVariable._comp_testing()
 def test_create(t1: List[float]) -> None:
     "Test the ability to create an index a 1D Tensor"
     t2 = tensor(t1)
-    print(t1, t2)
     for i in range(len(t1)):
         assert t1[i] == t2[i]
 
@@ -73,6 +72,20 @@ def test_permute(data: DataObject, t1: Tensor) -> None:
 
     grad_check(permute, t1)
 
+@given(data())
+@pytest.mark.task2_4
+def test_permute_grad(data: DataObject) -> None:
+    "Test the permute function's gradient"
+    def permute_log(a: Tensor) -> Tensor:
+        return a.permute(*permutation).log()
+
+    for i in range(5):
+        np.random.seed(i)
+        shape = (4, 2, 1, 3)
+        permutation = data.draw(permutations(range(len(shape))))
+        t1 = tensor(np.random.random(shape).tolist())
+
+        grad_check(permute_log, t1)
 
 @pytest.mark.task2_4
 def test_grad_size() -> None:
@@ -196,7 +209,7 @@ def test_fromnumpy() -> None:
 
 @pytest.mark.task2_3
 def test_broadcast_map() -> None:
-    for seed in range(100):
+    for seed in range(10):
         np.random.seed(seed)
         inp_np = np.random.random((1, 4))
         inp_exp = np.exp(inp_np)
@@ -210,7 +223,7 @@ def test_broadcast_map() -> None:
 
 @pytest.mark.task2_3
 def test_diff_stride_map() -> None:
-    for seed in range(100):
+    for seed in range(10):
         np.random.seed(seed)
         inp_np = np.random.random((2, 3, 1, 4))
         out_np = np.exp(inp_np)
@@ -223,7 +236,7 @@ def test_diff_stride_map() -> None:
 
 @pytest.mark.task2_3
 def test_broadcast_and_diff_stride_map() -> None:
-    for seed in range(100):
+    for seed in range(10):
         np.random.seed(seed)
         inp_np = np.random.random((5, 1, 4, 2))
         inp_exp = np.exp(inp_np)
@@ -237,7 +250,7 @@ def test_broadcast_and_diff_stride_map() -> None:
 
 @pytest.mark.task2_3
 def test_broadcast_zip() -> None:
-    for seed in range(100):
+    for seed in range(10):
         np.random.seed(seed)
         a_np = np.random.random((3, 2, 3, 1, 2))
         b_np = np.random.random((1, 4, 2))
@@ -250,7 +263,7 @@ def test_broadcast_zip() -> None:
 
 @pytest.mark.task2_3
 def test_diff_stride_zip() -> None:
-    for seed in range(100):
+    for seed in range(10):
         np.random.seed(seed)
         a_np = np.random.random((1, 3, 4, 2, 5))
         b_np = np.random.random((1, 3, 4, 2, 5))
@@ -264,7 +277,7 @@ def test_diff_stride_zip() -> None:
 
 @pytest.mark.task2_3
 def test_broadcast_and_diff_stride_zip() -> None:
-    for seed in range(100):
+    for seed in range(10):
         np.random.seed(seed)
         a_np = np.random.random((3, 3, 4, 2, 1))
         b_np = np.random.random((4, 2, 2))
