@@ -1,12 +1,11 @@
 from typing import Callable, Iterable, List, Tuple
 
+import numpy as np
 import pytest
 from hypothesis import given
 from hypothesis.strategies import DataObject, data, lists, permutations
 
 from minitorch import MathTestVariable, Tensor, grad_check, tensor
-
-import numpy as np
 
 from .strategies import assert_close, small_floats
 from .tensor_strategies import shaped_tensors, tensors
@@ -72,10 +71,12 @@ def test_permute(data: DataObject, t1: Tensor) -> None:
 
     grad_check(permute, t1)
 
+
 @given(data())
 @pytest.mark.task2_4
 def test_permute_grad(data: DataObject) -> None:
     "Test the permute function's gradient"
+
     def permute_log(a: Tensor) -> Tensor:
         return a.permute(*permutation).log()
 
@@ -86,6 +87,7 @@ def test_permute_grad(data: DataObject) -> None:
         t1 = tensor(np.random.random(shape).tolist())
 
         grad_check(permute_log, t1)
+
 
 @pytest.mark.task2_4
 def test_grad_size() -> None:
@@ -143,6 +145,7 @@ def test_two_grad_broadcast(
     grad_check(tensor_fn, t1.sum(0), t2)
     grad_check(tensor_fn, t1, t2.sum(0))
 
+
 @pytest.mark.task2_1
 def test_fromlist() -> None:
     "Test longer from list conversion"
@@ -150,6 +153,7 @@ def test_fromlist() -> None:
     assert t.shape == (2, 3)
     t = tensor([[[2, 3, 4], [4, 5, 7]]])
     assert t.shape == (1, 2, 3)
+
 
 @pytest.mark.task2_3
 def test_view() -> None:
@@ -165,6 +169,7 @@ def test_view() -> None:
     t2 = t2.view(2, 3)
     assert t.is_close(t2).all().item() == 1.0
 
+
 @pytest.mark.task2_4
 @given(tensors())
 def test_back_view(t1: Tensor) -> None:
@@ -175,6 +180,7 @@ def test_back_view(t1: Tensor) -> None:
         return a.view(a.size)
 
     grad_check(view, t1)
+
 
 @pytest.mark.task2_1
 @pytest.mark.xfail
@@ -234,6 +240,7 @@ def test_diff_stride_map() -> None:
         assert out_t.shape == out_np.shape
         assert np.allclose(out_t.to_numpy(), out_np)
 
+
 @pytest.mark.task2_3
 def test_broadcast_and_diff_stride_map() -> None:
     for seed in range(10):
@@ -248,6 +255,7 @@ def test_broadcast_and_diff_stride_map() -> None:
         assert out_t.shape == out_np.shape
         assert np.allclose(out_t.to_numpy(), out_np)
 
+
 @pytest.mark.task2_3
 def test_broadcast_zip() -> None:
     for seed in range(10):
@@ -260,6 +268,7 @@ def test_broadcast_zip() -> None:
         out_t = a_t.f.add_zip(a_t, b_t)
         assert out_t.shape == out_np.shape
         assert np.allclose(out_t.to_numpy(), out_np)
+
 
 @pytest.mark.task2_3
 def test_diff_stride_zip() -> None:
@@ -275,6 +284,7 @@ def test_diff_stride_zip() -> None:
         assert out_t.shape == out_np.shape
         assert np.allclose(out_t.to_numpy(), out_np)
 
+
 @pytest.mark.task2_3
 def test_broadcast_and_diff_stride_zip() -> None:
     for seed in range(10):
@@ -288,7 +298,6 @@ def test_broadcast_and_diff_stride_zip() -> None:
         out_t = a_t.f.mul_zip(a_t, b_t)
         assert out_t.shape == out_np.shape
         assert np.allclose(out_t.to_numpy(), out_np)
-
 
 
 @pytest.mark.task2_3

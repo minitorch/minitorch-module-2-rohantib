@@ -18,7 +18,7 @@ from .tensor_ops import SimpleBackend, TensorBackend
 if TYPE_CHECKING:
     from typing import Any, List, Tuple, Union
 
-    from .tensor import Tensor, Shape, Strides
+    from .tensor import Shape, Strides, Tensor
     from .tensor_data import UserIndex, UserShape
 
 
@@ -106,7 +106,9 @@ class Mul(Function):
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, Tensor]:
         a, b = ctx.saved_values
-        return grad_output.f.mul_zip(b, grad_output), grad_output.f.mul_zip(a, grad_output)
+        return grad_output.f.mul_zip(b, grad_output), grad_output.f.mul_zip(
+            a, grad_output
+        )
 
 
 class Sigmoid(Function):
@@ -185,7 +187,7 @@ class LT(Function):
     def forward(ctx: Context, a: Tensor, b: Tensor) -> Tensor:
         ctx.save_for_backward(a, b)
         return a.f.lt_zip(a, b)
-    
+
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, Tensor]:
         a, b = ctx.saved_values
@@ -216,10 +218,10 @@ class Permute(Function):
     @staticmethod
     def _t_ndarr_to_tuple(t: Union[Tensor, Shape, Strides]) -> Tuple[int, ...]:
         """
-            Converts a tensor or numpy array to an int tuple
+        Converts a tensor or numpy array to an int tuple
         """
         return tuple([int(t[i]) for i in range(t.size)])
-    
+
     @staticmethod
     def forward(ctx: Context, a: Tensor, order: Tensor) -> Tensor:
         ctx.save_for_backward(order)
@@ -229,7 +231,7 @@ class Permute(Function):
             new_t_storage,
             Permute._t_ndarr_to_tuple(new_t_shape),
             strides=Permute._t_ndarr_to_tuple(new_t_strides),
-            backend=a.backend
+            backend=a.backend,
         )
 
     @staticmethod
@@ -239,18 +241,20 @@ class Permute(Function):
         # Generate the inverse permutation
         for i in range(order.size):
             restore_order[int(order[i])] = i
-        new_tensor_data = grad_output._tensor.permute(*Permute._t_ndarr_to_tuple(restore_order))
+        new_tensor_data = grad_output._tensor.permute(
+            *Permute._t_ndarr_to_tuple(restore_order)
+        )
         new_t_storage, new_t_shape, new_t_strides = new_tensor_data.tuple()
         return (
             minitorch.Tensor.make(
                 new_t_storage,
                 Permute._t_ndarr_to_tuple(new_t_shape),
                 strides=Permute._t_ndarr_to_tuple(new_t_strides),
-                backend=grad_output.backend
+                backend=grad_output.backend,
             ),
-            0.0
+            0.0,
         )
-    
+
 
 class View(Function):
     @staticmethod

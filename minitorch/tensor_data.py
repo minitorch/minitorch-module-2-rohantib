@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from typing import Iterable, Optional, Sequence, Tuple, Union, Generator
+from typing import Generator, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numba
 import numpy as np
@@ -42,8 +42,10 @@ def index_to_position(index: Index, strides: Strides) -> int:
     Returns:
         Position in storage
     """
-    index, strides = np.asanyarray(index), np.asanyarray(strides)  # To make visualizations work since they don't follow typing
-    return (index * strides).sum()
+    # To make visualizations work since they don't follow typing
+    index = np.asanyarray(index)
+    strides = np.asanyarray(strides)
+    return int((index * strides).sum())
 
 
 def to_index(ordinal: int, shape: Shape, out_index: OutIndex) -> None:
@@ -112,14 +114,16 @@ def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
         shape1 = (1,) * (len(shape2) - len(shape1)) + tuple(shape1)
     else:
         shape2 = (1,) * (len(shape1) - len(shape2)) + tuple(shape2)
-    new_shape: UserShape = []
+    new_shape: List[int] = []
     for i in range(len(shape1)):
         d1, d2 = shape1[i], shape2[i]
         if d1 == d2 or d1 == 1 or d2 == 1:
             new_shape.append(max(d1, d2))
         else:
-            raise IndexingError(f"The size of tensor a ({d1}) must match the size of tensor b ({d2}) at non-singleton dimension {i}")
-    return tuple(new_shape)    
+            raise IndexingError(
+                f"The size of tensor a ({d1}) must match the size of tensor b ({d2}) at non-singleton dimension {i}"
+            )
+    return tuple(new_shape)
 
 
 def strides_from_shape(shape: UserShape) -> UserStrides:

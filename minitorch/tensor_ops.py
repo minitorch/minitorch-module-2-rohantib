@@ -277,7 +277,9 @@ def tensor_map(fn: Callable[[float], float]) -> Any:
             # NOTE: There may be no practical or existing setting where this function is called with a non-contiguous `out`.
             # However, I leave the conversion of the index to a position here as a guard, and also test for it. This also makes it flexible to other
             # implementations of to_index that do not produce indices in order, since index_to_position and to_index aren't necessarily inverses.
-            out[index_to_position(out_index, out_strides)] = fn(in_storage[index_to_position(in_index, in_strides)])
+            out[index_to_position(out_index, out_strides)] = fn(
+                in_storage[index_to_position(in_index, in_strides)]
+            )
 
     return _map
 
@@ -381,7 +383,9 @@ def tensor_reduce(fn: Callable[[float, float], float]) -> Any:
             a_start_ind: int = index_to_position(index, a_strides)
             # NOTE: This indexing for `out` is retained for same reasons as is listed above in `_zip`.
             out_ind: int = index_to_position(index, out_strides)
-            for a_ind in range(a_start_ind, a_start_ind + reduce_dim_total_len, reduce_dim_a_stride):
+            for a_ind in range(
+                a_start_ind, a_start_ind + reduce_dim_total_len, reduce_dim_a_stride
+            ):
                 out[out_ind] = fn(a_storage[a_ind], out[out_ind])
 
     return _reduce
