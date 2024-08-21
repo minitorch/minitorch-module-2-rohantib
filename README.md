@@ -28,4 +28,4 @@ Size of hidden layer: 15, Time per epoch: 1.285s
 XOR dataset, 75 points \
 Size of hidden layer: 2, Time per epoch: 0.138s \
 Size of hidden layer: 10, Time per epoch: 0.972s \
-Size of hidden layer: 15, Time per epoch 1.831s: 
+Size of hidden layer: 15, Time per epoch: 1.831s 
